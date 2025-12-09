@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <title>Makudoku – Daily Puzzle</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <style>
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+                sans-serif;
+            margin: 0;
+            padding: 1.5rem;
+            background: #f5f5f5;
+        }
+
+        .page {
+            max-width: 900px;
+            margin: 0 auto;
+            background: #fff;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+        }
+
+        #puzzle-container {
+            margin-top: 1rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 350px;
+        }
+
+        .controls {
+            margin-top: 1.5rem;
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        button {
+            padding: 0.5rem 1rem;
+            border-radius: 999px;
+            border: none;
+            cursor: pointer;
+            font-size: 0.95rem;
+        }
+
+        .btn-primary {
+            background: #111827;
+            color: white;
+        }
+
+        .btn-secondary {
+            background: #e5e7eb;
+            color: #111827;
+        }
+
+        #status {
+            font-size: 0.9rem;
+            color: #6b7280;
+        }
+
+        pre {
+            background: #f3f4f6;
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            font-size: 0.85rem;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+
+<body>
+    <main class="page">
+        <h1>Makudoku – Daily Sudoku</h1>
+        <p id="status">Loading puzzle…</p>
+
+        <div id="puzzle-container">
+        </div>
+
+        <div class="controls">
+            <button id="reload" class="btn-secondary">New random puzzle</button>
+            <button id="show-solution" class="btn-primary">Show solution</button>
+        </div>
+
+        <details style="margin-top: 1rem;">
+            <summary>Solution (as digits)</summary>
+            <pre id="solution-output">(not loaded)</pre>
+        </details>
+    </main>
+
+    <script src="app.js" type="module"></script>
+</body>
+
+</html>
