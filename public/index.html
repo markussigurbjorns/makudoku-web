@@ -5,72 +5,7 @@
     <meta charset="utf-8" />
     <title>Makudoku – Daily Puzzle</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-
-    <style>
-        body {
-            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
-                sans-serif;
-            margin: 0;
-            padding: 1.5rem;
-            background: #f5f5f5;
-        }
-
-        .page {
-            max-width: 900px;
-            margin: 0 auto;
-            background: #fff;
-            border-radius: 12px;
-            padding: 1.5rem;
-            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
-        }
-
-        #puzzle-container {
-            margin-top: 1rem;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 350px;
-        }
-
-        .controls {
-            margin-top: 1.5rem;
-            display: flex;
-            gap: 0.75rem;
-            flex-wrap: wrap;
-            align-items: center;
-        }
-
-        button {
-            padding: 0.5rem 1rem;
-            border-radius: 999px;
-            border: none;
-            cursor: pointer;
-            font-size: 0.95rem;
-        }
-
-        .btn-primary {
-            background: #111827;
-            color: white;
-        }
-
-        .btn-secondary {
-            background: #e5e7eb;
-            color: #111827;
-        }
-
-        #status {
-            font-size: 0.9rem;
-            color: #6b7280;
-        }
-
-        pre {
-            background: #f3f4f6;
-            padding: 0.75rem;
-            border-radius: 0.5rem;
-            font-size: 0.85rem;
-            overflow-x: auto;
-        }
-    </style>
+    <link rel="stylesheet" href="style.css" />
 </head>
 
 <body>
@@ -81,7 +16,24 @@
         <div id="puzzle-container">
         </div>
 
+        <div class="digit-pad" aria-label="Digit input">
+            <button class="pad-btn" data-digit="1">1</button>
+            <button class="pad-btn" data-digit="2">2</button>
+            <button class="pad-btn" data-digit="3">3</button>
+            <button class="pad-btn" data-digit="4">4</button>
+            <button class="pad-btn" data-digit="5">5</button>
+            <button class="pad-btn" data-digit="6">6</button>
+            <button class="pad-btn" data-digit="7">7</button>
+            <button class="pad-btn" data-digit="8">8</button>
+            <button class="pad-btn" data-digit="9">9</button>
+            <button class="pad-btn erase" data-erase="true">Erase</button>
+        </div>
+
         <div class="controls">
+            <div class="mode-toggle" role="group" aria-label="Input mode">
+                <button id="mode-value" class="btn-secondary mode active" aria-pressed="true">Value</button>
+                <button id="mode-candidate" class="btn-secondary mode" aria-pressed="false">Candidate</button>
+            </div>
             <button id="reload" class="btn-secondary">New random puzzle</button>
             <button id="show-solution" class="btn-primary">Show solution</button>
         </div>
