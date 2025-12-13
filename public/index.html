@@ -3,8 +3,9 @@
 
 <head>
     <meta charset="utf-8" />
-    <title>Makudoku – Daily Puzzle</title>
+    <title>Makudoku – Daily Sudoku Puzzle</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="/favicon.ico" />
     <link rel="stylesheet" href="style.css" />
 </head>
 
@@ -20,22 +21,43 @@
             <aside class="sidebar" aria-label="Puzzle controls">
                 <div class="digit-pad" aria-label="Digit input">
                     <div class="numpad" aria-label="Digits 1 to 9">
-                        <button id="mode-value" class="pad-btn mode active" aria-pressed="true">Value</button>
+                        <button id="mode-value" class="pad-btn mode icon-btn active" aria-pressed="true" aria-label="Value mode">
+                            <img class="btn-icon" src="/wwwroot/user-value.svg" alt="" aria-hidden="true" />
+                            <span class="sr-only">Value</span>
+                        </button>
                         <button class="pad-btn" data-digit="1">1</button>
                         <button class="pad-btn" data-digit="2">2</button>
                         <button class="pad-btn" data-digit="3">3</button>
-                        <button id="mode-candidate" class="pad-btn mode" aria-pressed="false">Cand</button>
+                        <button id="mode-candidate" class="pad-btn mode icon-btn" aria-pressed="false" aria-label="Candidate mode">
+                            <img class="btn-icon" src="/wwwroot/candidates.svg" alt="" aria-hidden="true" />
+                            <span class="sr-only">Candidates</span>
+                        </button>
                         <button class="pad-btn" data-digit="4">4</button>
                         <button class="pad-btn" data-digit="5">5</button>
                         <button class="pad-btn" data-digit="6">6</button>
-                        <button class="pad-btn">Multi</button>
+                        <button id="multi-select" class="pad-btn toggle icon-btn" aria-pressed="false" aria-label="Multi-select">
+                            <img class="btn-icon" src="/wwwroot/multi-select.svg" alt="" aria-hidden="true" />
+                            <span class="sr-only">Multi-select</span>
+                        </button>
                         <button class="pad-btn" data-digit="7">7</button>
                         <button class="pad-btn" data-digit="8">8</button>
                         <button class="pad-btn" data-digit="9">9</button>
-                        <button class="pad-btn">check</button>
-                        <button class="pad-btn">undo</button>
-                        <button class="pad-btn">redo</button>
-                        <button class="pad-btn erase" data-erase="true">Erase</button>
+                        <button id="check-btn" class="pad-btn icon-btn" type="button" aria-label="Check">
+                            <img class="btn-icon" src="/wwwroot/check.svg" alt="" aria-hidden="true" />
+                            <span class="sr-only">Check</span>
+                        </button>
+                        <button id="undo-btn" class="pad-btn icon-btn" type="button" aria-label="Undo" disabled>
+                            <img class="btn-icon" src="/wwwroot/undo.svg" alt="" aria-hidden="true" />
+                            <span class="sr-only">Undo</span>
+                        </button>
+                        <button id="redo-btn" class="pad-btn icon-btn" type="button" aria-label="Redo" disabled>
+                            <img class="btn-icon" src="/wwwroot/redo.svg" alt="" aria-hidden="true" />
+                            <span class="sr-only">Redo</span>
+                        </button>
+                        <button class="pad-btn erase icon-btn" data-erase="true" aria-label="Erase">
+                            <img class="btn-icon" src="/wwwroot/erase.svg" alt="" aria-hidden="true" />
+                            <span class="sr-only">Erase</span>
+                        </button>
                     </div>
                 </div>
 

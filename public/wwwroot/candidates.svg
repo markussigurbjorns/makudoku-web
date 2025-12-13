@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="32"
+   height="32"
+   viewBox="0 0 32 32"
+   version="1.1"
+   id="svg1"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs1" />
+  <g
+     id="layer1"
+     transform="matrix(1.8816215,0,0,1.6230593,-18.507296,-12.869467)">
+    <text
+       xml:space="preserve"
+       style="font-size:16px;text-align:start;writing-mode:lr-tb;direction:ltr;text-anchor:start;white-space:pre;inline-size:0;fill:#000000"
+       x="14.490566"
+       y="12.830189"
+       id="text2"
+       transform="matrix(0.47788554,0,0,0.47788554,2.7289077,21.474004)"><tspan
+         id="tspan4"
+         x="14.490566"
+         y="12.830189"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:'Droid Sans';-inkscape-font-specification:'Droid Sans'">D</tspan></text>
+    <g
+       id="g1"
+       transform="translate(16.770587,-15.193323)">
+      <text
+         xml:space="preserve"
+         style="font-size:16px;text-align:start;writing-mode:lr-tb;direction:ltr;text-anchor:start;white-space:pre;inline-size:10.2582;fill:#000000"
+         x="14.490566"
+         y="12.830189"
+         id="text2-4"
+         transform="matrix(0.47788554,0,0,0.47788554,-1.2211854,22.541812)"><tspan
+           x="14.490566"
+           y="12.830189"
+           id="tspan2"><tspan
+             style="font-family:'Droid Sans';-inkscape-font-specification:'Droid Sans'"
+             id="tspan1">B</tspan></tspan></text>
+      <g
+         id="g1-9"
+         transform="translate(-16.505069,1.0389728)">
+        <text
+           xml:space="preserve"
+           style="font-size:16px;text-align:start;writing-mode:lr-tb;direction:ltr;text-anchor:start;white-space:pre;inline-size:0;fill:#000000"
+           x="14.490566"
+           y="12.830189"
+           id="text2-0"
+           transform="matrix(0.47788554,0,0,0.47788554,2.6490212,21.52031)"><tspan
+             id="tspan4-81"
+             x="14.490566"
+             y="12.830189"
+             style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:'Droid Sans';-inkscape-font-specification:'Droid Sans'">A</tspan></text>
+      </g>
+    </g>
+    <text
+       xml:space="preserve"
+       style="font-size:16px;text-align:start;writing-mode:lr-tb;direction:ltr;text-anchor:start;white-space:pre;inline-size:0;fill:#000000"
+       x="14.490566"
+       y="12.830189"
+       id="text2-5"
+       transform="matrix(0.47788554,0,0,0.47788554,9.4595521,14.757413)"><tspan
+         id="tspan4-8"
+         x="14.490566"
+         y="12.830189"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:'Droid Sans';-inkscape-font-specification:'Droid Sans'">C</tspan></text>
+  </g>
+</svg>

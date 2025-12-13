@@ -1,16 +1,17 @@
-use std::net::SocketAddr;
+use std::{collections::HashSet, net::SocketAddr};
 
 use axum::{Json, Router, http::StatusCode, response::IntoResponse, routing::get};
 use makudoku::{
-    GenerationConfig, RenderOptions, generate_random_variant_puzzle, render_puzzle_svg,
+    GenerationConfig, RenderOptions, VariantSpec, generate_random_variant_puzzle, render_puzzle_svg,
 };
 use serde::Serialize;
 use tower_http::services::ServeDir;
 
 #[derive(Serialize)]
-struct PuzzleResponse {
+struct PuzzleResponse<'a> {
     svg: String,
     solution: Vec<u8>,
+    variants: Vec<&'a str>,
 }
 
 #[tokio::main]
@@ -27,6 +28,18 @@ async fn main() -> anyhow::Result<()> {
 
     axum::serve(listener, app).await?;
     Ok(())
+}
+
+pub fn variant_kinds(input: &[VariantSpec]) -> Vec<&'static str> {
+    let mut seen = HashSet::new();
+
+    input
+        .iter()
+        .filter_map(|v| {
+            let k = v.kind_str();
+            seen.insert(k).then_some(k)
+        })
+        .collect()
 }
 
 async fn today_puzzle_handler() -> impl IntoResponse {
@@ -56,9 +69,11 @@ async fn today_puzzle_handler() -> impl IntoResponse {
             }
         };
 
+    let variants = variant_kinds(&puzzle.constraints);
     Json(PuzzleResponse {
         svg: puzzle_svg,
         solution: puzzle.solution.to_vec(),
+        variants: variants,
     })
     .into_response()
 }
