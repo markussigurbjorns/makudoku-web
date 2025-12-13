@@ -1,8 +1,6 @@
 const puzzleContainer = document.getElementById("puzzle-container");
 const statusEl = document.getElementById("status");
 const reloadBtn = document.getElementById("reload");
-const showSolutionBtn = document.getElementById("show-solution");
-const solutionOutput = document.getElementById("solution-output");
 const modeValueBtn = document.getElementById("mode-value");
 const modeCandidateBtn = document.getElementById("mode-candidate");
 const digitPad = document.querySelector(".digit-pad");
@@ -52,7 +50,6 @@ async function loadPuzzle() {
 
     currentSolution = Array.isArray(data.solution) ? data.solution : [];
     statusEl.textContent = "Puzzle loaded.";
-    solutionOutput.textContent = "(hidden – press 'Show solution')";
   } catch (err) {
     console.error(err);
     statusEl.textContent = "Failed to load puzzle.";
@@ -61,37 +58,13 @@ async function loadPuzzle() {
   }
 }
 
-// ---------- Solution formatting ----------
-
-function formatSolutionDigits(solutionArr) {
-  if (!solutionArr || solutionArr.length === 0) {
-    return "(no solution data)";
-  }
-
-  if (solutionArr.length === 81) {
-    const rows = [];
-    for (let r = 0; r < 9; r++) {
-      const rowDigits = solutionArr
-        .slice(r * 9, (r + 1) * 9)
-        .map((d) => d.toString())
-        .join(" ");
-      rows.push(rowDigits);
-    }
-    return rows.join("\n");
-  }
-
-  return solutionArr.map((d) => d.toString()).join("");
-}
-
 // ---------- Wire up buttons ----------
 
-reloadBtn.addEventListener("click", () => {
-  loadPuzzle();
-});
-
-showSolutionBtn.addEventListener("click", () => {
-  solutionOutput.textContent = formatSolutionDigits(currentSolution);
-});
+if (reloadBtn) {
+  reloadBtn.addEventListener("click", () => {
+    loadPuzzle();
+  });
+}
 
 // ---------- Mode toggle ----------
 
@@ -203,6 +176,19 @@ function initSvgInteraction() {
     console.warn("No <svg> found inside #puzzle-container");
     return;
   }
+
+  const widthAttr = svg.getAttribute("width");
+  const heightAttr = svg.getAttribute("height");
+  const hasViewBox = svg.hasAttribute("viewBox");
+  if (!hasViewBox && widthAttr && heightAttr) {
+    const w = parseFloat(widthAttr);
+    const h = parseFloat(heightAttr);
+    if (Number.isFinite(w) && Number.isFinite(h)) {
+      svg.setAttribute("viewBox", `0 0 ${w} ${h}`);
+    }
+  }
+  svg.removeAttribute("width");
+  svg.removeAttribute("height");
 
   highlightLayer = svg.querySelector("#highlights");
   userLayer = svg.querySelector("#user-values");

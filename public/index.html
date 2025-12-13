@@ -20,18 +20,18 @@
             <aside class="sidebar" aria-label="Puzzle controls">
                 <div class="digit-pad" aria-label="Digit input">
                     <div class="numpad" aria-label="Digits 1 to 9">
-                        <button class="pad-btn">Value</button>
-                        <button class="pad-btn" data-digit="7">7</button>
-                        <button class="pad-btn" data-digit="8">8</button>
-                        <button class="pad-btn" data-digit="9">9</button>
-                        <button class="pad-btn">Cand</button>
+                        <button id="mode-value" class="pad-btn mode active" aria-pressed="true">Value</button>
+                        <button class="pad-btn" data-digit="1">1</button>
+                        <button class="pad-btn" data-digit="2">2</button>
+                        <button class="pad-btn" data-digit="3">3</button>
+                        <button id="mode-candidate" class="pad-btn mode" aria-pressed="false">Cand</button>
                         <button class="pad-btn" data-digit="4">4</button>
                         <button class="pad-btn" data-digit="5">5</button>
                         <button class="pad-btn" data-digit="6">6</button>
                         <button class="pad-btn">Multi</button>
-                        <button class="pad-btn" data-digit="1">1</button>
-                        <button class="pad-btn" data-digit="2">2</button>
-                        <button class="pad-btn" data-digit="3">3</button>
+                        <button class="pad-btn" data-digit="7">7</button>
+                        <button class="pad-btn" data-digit="8">8</button>
+                        <button class="pad-btn" data-digit="9">9</button>
                         <button class="pad-btn">check</button>
                         <button class="pad-btn">undo</button>
                         <button class="pad-btn">redo</button>
@@ -39,27 +39,9 @@
                     </div>
                 </div>
 
-                <div class="controls">
-                    <div class="mode-toggle" role="group" aria-label="Input mode">
-                        <button id="mode-value" class="btn-secondary mode active" aria-pressed="true">Value</button>
-                        <button id="mode-candidate" class="btn-secondary mode" aria-pressed="false">Candidate</button>
-                    </div>
-                </div>
-
-                <details class="debug-tools">
-                    <summary>Debug tools</summary>
-                    <div class="debug-actions" role="group" aria-label="Debug actions">
-                        <button id="reload" class="btn-secondary">New random puzzle</button>
-                        <button id="show-solution" class="btn-primary">Show solution</button>
-                    </div>
-                </details>
             </aside>
         </div>
 
-        <details style="margin-top: 1rem;">
-            <summary>Solution (as digits)</summary>
-            <pre id="solution-output">(not loaded)</pre>
-        </details>
     </main>
 
     <script src="app.js" type="module"></script>
