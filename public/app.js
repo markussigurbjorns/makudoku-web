@@ -1,4 +1,6 @@
 const puzzleContainer = document.getElementById("puzzle-container");
+const svgRoot = document.getElementById("svg-root") || puzzleContainer;
+const variantsEl = document.getElementById("variants");
 const statusEl = document.getElementById("status");
 const reloadBtn = document.getElementById("reload");
 const modeValueBtn = document.getElementById("mode-value");
@@ -36,6 +38,45 @@ let currentState = null; // { values: (string|null)[], candidates: number[] }
 let undoStack = [];
 let redoStack = [];
 let solutionFlat = null; // string[81]
+
+const VARIANT_LABELS = {
+  kropki_white: "Kropki (white)",
+  kropki_black: "Kropki (black)",
+  thermo: "Thermo",
+  arrow: "Arrow",
+  killer: "Killer cages",
+  king: "King move",
+  knight: "Knight move",
+  queen: "Queen move",
+};
+
+function formatVariantLabel(kind) {
+  if (VARIANT_LABELS[kind]) return VARIANT_LABELS[kind];
+  return String(kind)
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function renderVariants(kinds) {
+  if (!variantsEl) return;
+  variantsEl.innerHTML = "";
+
+  const list = Array.isArray(kinds) ? kinds : [];
+  if (list.length === 0) {
+    const pill = document.createElement("span");
+    pill.className = "variant-pill";
+    pill.textContent = "Classic";
+    variantsEl.appendChild(pill);
+    return;
+  }
+
+  for (const kind of list) {
+    const pill = document.createElement("span");
+    pill.className = "variant-pill";
+    pill.textContent = formatVariantLabel(kind);
+    variantsEl.appendChild(pill);
+  }
+}
 
 function cellIndex(row, col) {
   return Number(row) * 9 + Number(col);
@@ -233,7 +274,8 @@ function initStateFromSvg() {
 async function loadPuzzle() {
   try {
     statusEl.textContent = "Loading puzzle…";
-    puzzleContainer.innerHTML = "";
+    if (svgRoot) svgRoot.innerHTML = "";
+    if (variantsEl) variantsEl.innerHTML = "";
     selectedRects.clear();
     focusRect = null;
     setMode("value");
@@ -250,7 +292,7 @@ async function loadPuzzle() {
 
     const data = await res.json(); // { svg: string, solution: number[] }
 
-    puzzleContainer.innerHTML = data.svg;
+    if (svgRoot) svgRoot.innerHTML = data.svg;
 
     // Init interaction with the *new* SVG
     initSvgInteraction();
@@ -258,7 +300,7 @@ async function loadPuzzle() {
 
     currentSolution = Array.isArray(data.solution) ? data.solution : [];
     variants = Array.isArray(data.variants) ? data.variants : [];
-    console.log(variants);
+    renderVariants(variants);
     statusEl.textContent = "Puzzle loaded.";
     if (currentSolution.length === 81) {
       solutionFlat = currentSolution.map((n) => String(n));
@@ -268,8 +310,14 @@ async function loadPuzzle() {
   } catch (err) {
     console.error(err);
     statusEl.textContent = "Failed to load puzzle.";
-    puzzleContainer.innerHTML =
-      "<p>Something went wrong loading the puzzle. Try again.</p>";
+    if (variantsEl) variantsEl.innerHTML = "";
+    if (svgRoot) {
+      svgRoot.innerHTML =
+        "<p>Something went wrong loading the puzzle. Try again.</p>";
+    } else {
+      puzzleContainer.innerHTML =
+        "<p>Something went wrong loading the puzzle. Try again.</p>";
+    }
   }
 }
 

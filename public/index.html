@@ -16,26 +16,31 @@
 
         <div class="game-layout">
             <div id="puzzle-container">
+                <div id="variants" class="variants" aria-label="Puzzle variants"></div>
+                <div id="svg-root" class="svg-root" aria-label="Sudoku grid"></div>
             </div>
 
             <aside class="sidebar" aria-label="Puzzle controls">
                 <div class="digit-pad" aria-label="Digit input">
                     <div class="numpad" aria-label="Digits 1 to 9">
-                        <button id="mode-value" class="pad-btn mode icon-btn active" aria-pressed="true" aria-label="Value mode">
+                        <button id="mode-value" class="pad-btn mode icon-btn active" aria-pressed="true"
+                            aria-label="Value mode">
                             <img class="btn-icon" src="/wwwroot/user-value.svg" alt="" aria-hidden="true" />
                             <span class="sr-only">Value</span>
                         </button>
                         <button class="pad-btn" data-digit="1">1</button>
                         <button class="pad-btn" data-digit="2">2</button>
                         <button class="pad-btn" data-digit="3">3</button>
-                        <button id="mode-candidate" class="pad-btn mode icon-btn" aria-pressed="false" aria-label="Candidate mode">
+                        <button id="mode-candidate" class="pad-btn mode icon-btn" aria-pressed="false"
+                            aria-label="Candidate mode">
                             <img class="btn-icon" src="/wwwroot/candidates.svg" alt="" aria-hidden="true" />
                             <span class="sr-only">Candidates</span>
                         </button>
                         <button class="pad-btn" data-digit="4">4</button>
                         <button class="pad-btn" data-digit="5">5</button>
                         <button class="pad-btn" data-digit="6">6</button>
-                        <button id="multi-select" class="pad-btn toggle icon-btn" aria-pressed="false" aria-label="Multi-select">
+                        <button id="multi-select" class="pad-btn toggle icon-btn" aria-pressed="false"
+                            aria-label="Multi-select">
                             <img class="btn-icon" src="/wwwroot/multi-select.svg" alt="" aria-hidden="true" />
                             <span class="sr-only">Multi-select</span>
                         </button>
