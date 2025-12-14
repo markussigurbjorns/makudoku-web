@@ -1,3 +1,5 @@
 /target
 AGENTS.md
+Cargo.lock
 public/example_puzzle.svg
+data/*.db*

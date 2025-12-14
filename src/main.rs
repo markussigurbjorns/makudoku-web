@@ -1,11 +1,16 @@
-use std::{collections::HashSet, net::SocketAddr};
-
 use axum::{Json, Router, http::StatusCode, response::IntoResponse, routing::get};
 use makudoku::{
     GenerationConfig, RenderOptions, VariantSpec, generate_random_variant_puzzle, render_puzzle_svg,
 };
 use serde::Serialize;
+use sqlx::{Sqlite, SqlitePool, migrate::MigrateDatabase, sqlite::SqlitePoolOptions};
+use std::{collections::HashSet, fs::create_dir_all, net::SocketAddr};
 use tower_http::services::ServeDir;
+
+#[derive(Clone)]
+struct AppState {
+    db: SqlitePool,
+}
 
 #[derive(Serialize)]
 struct PuzzleResponse<'a> {
@@ -16,6 +21,23 @@ struct PuzzleResponse<'a> {
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    create_dir_all("data")?;
+
+    let db_url = "sqlite:data/makudoku.db";
+
+    if !Sqlite::database_exists(db_url).await? {
+        Sqlite::create_database(db_url).await?;
+    }
+
+    let pool = SqlitePoolOptions::new()
+        .max_connections(10) // look into this!!!!
+        .connect(db_url)
+        .await?;
+
+    sqlx::migrate!("./migrations").run(&pool).await?;
+
+    let state = AppState { db: pool };
+
     let serve_dir = ServeDir::new("public").append_index_html_on_directories(true);
 
     let app = Router::new()
