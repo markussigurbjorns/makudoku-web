@@ -1,1 +1,98 @@
-<h1>ADMIN</h1>
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <title>Makudoku – Admin</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="puzzle-endpoint" content="/api/puzzle/random" />
+    <link rel="icon" href="/favicon.ico" />
+    <link rel="stylesheet" href="/style.css" />
+    <link rel="stylesheet" href="/admin/style.css" />
+</head>
+
+<body class="admin">
+    <main class="page">
+        <header class="page-header">
+            <div>
+                <h1>Makudoku – Admin</h1>
+                <p class="muted">Tools for generating and reviewing puzzles.</p>
+            </div>
+        </header>
+
+        <nav class="tabs" role="tablist" aria-label="Admin sections">
+            <button id="tab-random" class="tab active" role="tab" aria-selected="true"
+                aria-controls="panel-random">Random puzzle</button>
+        </nav>
+
+        <section id="panel-random" class="panel active" role="tabpanel" aria-labelledby="tab-random">
+            <h2 class="admin-panel-title">Solve a random puzzle</h2>
+            <p class="muted">Uses the same UI as the public page, but loads from <code>/api/puzzle/random</code>.</p>
+
+            <div class="controls admin-controls">
+                <button id="reload" class="btn-primary" type="button">Generate</button>
+            </div>
+
+            <p id="status" class="muted">Loading puzzle…</p>
+
+            <div class="game-layout">
+                <div id="puzzle-container">
+                    <div id="variants" class="variants" aria-label="Puzzle variants"></div>
+                    <div id="svg-root" class="svg-root" aria-label="Sudoku grid"></div>
+                </div>
+
+                <aside class="sidebar" aria-label="Puzzle controls">
+                    <div class="digit-pad" aria-label="Digit input">
+                        <div class="numpad" aria-label="Digits 1 to 9">
+                            <button id="mode-value" class="pad-btn mode icon-btn active" aria-pressed="true"
+                                aria-label="Value mode">
+                                <img class="btn-icon" src="/wwwroot/user-value.svg" alt="" aria-hidden="true" />
+                                <span class="sr-only">Value</span>
+                            </button>
+                            <button class="pad-btn" data-digit="1">1</button>
+                            <button class="pad-btn" data-digit="2">2</button>
+                            <button class="pad-btn" data-digit="3">3</button>
+                            <button id="mode-candidate" class="pad-btn mode icon-btn" aria-pressed="false"
+                                aria-label="Candidate mode">
+                                <img class="btn-icon" src="/wwwroot/candidates.svg" alt="" aria-hidden="true" />
+                                <span class="sr-only">Candidates</span>
+                            </button>
+                            <button class="pad-btn" data-digit="4">4</button>
+                            <button class="pad-btn" data-digit="5">5</button>
+                            <button class="pad-btn" data-digit="6">6</button>
+                            <button id="multi-select" class="pad-btn toggle icon-btn" aria-pressed="false"
+                                aria-label="Multi-select">
+                                <img class="btn-icon" src="/wwwroot/multi-select.svg" alt="" aria-hidden="true" />
+                                <span class="sr-only">Multi-select</span>
+                            </button>
+                            <button class="pad-btn" data-digit="7">7</button>
+                            <button class="pad-btn" data-digit="8">8</button>
+                            <button class="pad-btn" data-digit="9">9</button>
+                            <button id="check-btn" class="pad-btn icon-btn" type="button" aria-label="Check">
+                                <img class="btn-icon" src="/wwwroot/check.svg" alt="" aria-hidden="true" />
+                                <span class="sr-only">Check</span>
+                            </button>
+                            <button id="undo-btn" class="pad-btn icon-btn" type="button" aria-label="Undo" disabled>
+                                <img class="btn-icon" src="/wwwroot/undo.svg" alt="" aria-hidden="true" />
+                                <span class="sr-only">Undo</span>
+                            </button>
+                            <button id="redo-btn" class="pad-btn icon-btn" type="button" aria-label="Redo" disabled>
+                                <img class="btn-icon" src="/wwwroot/redo.svg" alt="" aria-hidden="true" />
+                                <span class="sr-only">Redo</span>
+                            </button>
+                            <button class="pad-btn erase icon-btn" data-erase="true" aria-label="Erase">
+                                <img class="btn-icon" src="/wwwroot/erase.svg" alt="" aria-hidden="true" />
+                                <span class="sr-only">Erase</span>
+                            </button>
+                        </div>
+                    </div>
+
+                </aside>
+            </div>
+        </section>
+    </main>
+
+    <script src="/app.js" type="module"></script>
+</body>
+
+</html>

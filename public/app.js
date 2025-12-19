@@ -271,6 +271,17 @@ function initStateFromSvg() {
 
 // ---------- Fetch & load puzzle ----------
 
+function getPuzzleEndpoint() {
+  const meta = document.querySelector('meta[name="puzzle-endpoint"]');
+  const fromMeta = meta?.getAttribute("content")?.trim();
+  const fromDataset = document.documentElement?.dataset?.puzzleEndpoint?.trim();
+  if (fromMeta) return fromMeta;
+  if (fromDataset) return fromDataset;
+  // Defensive fallback: admin pages should default to random puzzles.
+  if (window.location?.pathname?.startsWith("/admin")) return "/api/puzzle/random";
+  return "/api/puzzle/today";
+}
+
 async function loadPuzzle() {
   try {
     statusEl.textContent = "Loading puzzle…";
@@ -281,7 +292,8 @@ async function loadPuzzle() {
     setMode("value");
     setMultiSelect(false);
 
-    const res = await fetch("/api/puzzle/today", {
+    const endpoint = getPuzzleEndpoint();
+    const res = await fetch(endpoint, {
       headers: { Accept: "application/json" },
     });
 
