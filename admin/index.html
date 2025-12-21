@@ -5,7 +5,7 @@
     <meta charset="utf-8" />
     <title>Makudoku – Admin</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="puzzle-endpoint" content="/api/puzzle/random" />
+    <meta name="puzzle-endpoint" content="/api/admin/puzzles/generate" />
     <link rel="icon" href="/favicon.ico" />
     <link rel="stylesheet" href="/style.css" />
     <link rel="stylesheet" href="/admin/style.css" />
@@ -23,16 +23,232 @@
         <nav class="tabs" role="tablist" aria-label="Admin sections">
             <button id="tab-random" class="tab active" role="tab" aria-selected="true"
                 aria-controls="panel-random">Random puzzle</button>
+            <button id="tab-custom" class="tab" role="tab" aria-selected="false"
+                aria-controls="panel-custom">Custom puzzle</button>
+            <button id="tab-review" class="tab" role="tab" aria-selected="false"
+                aria-controls="panel-review">Review puzzles</button>
+            <button id="tab-analytics" class="tab" role="tab" aria-selected="false"
+                aria-controls="panel-analytics">Analytics</button>
         </nav>
 
         <section id="panel-random" class="panel active" role="tabpanel" aria-labelledby="tab-random">
             <h2 class="admin-panel-title">Solve a random puzzle</h2>
-            <p class="muted">Uses the same UI as the public page, but loads from <code>/api/puzzle/random</code>.</p>
+            <p class="muted">Uses the admin generator, so you can publish the current puzzle.</p>
 
             <div class="controls admin-controls">
                 <button id="reload" class="btn-primary" type="button">Generate</button>
             </div>
 
+            <div class="admin-form admin-form-compact">
+                <div class="form-row">
+                    <label class="form-field">
+                        <span>Date (UTC)</span>
+                        <input id="random-date" type="date" required />
+                    </label>
+                    <label class="form-field">
+                        <span>Name</span>
+                        <input id="random-name" type="text" placeholder="Daily Variant #1" />
+                    </label>
+                    <label class="form-field">
+                        <span>Author</span>
+                        <input id="random-author" type="text" placeholder="Makudoku" />
+                    </label>
+                </div>
+
+                <div class="form-row">
+                    <label class="form-field">
+                        <span>Status</span>
+                        <select id="random-status">
+                            <option value="published" selected>published</option>
+                            <option value="draft">draft</option>
+                            <option value="archived">archived</option>
+                        </select>
+                    </label>
+                    <label class="form-field">
+                        <span>Difficulty</span>
+                        <input id="random-difficulty" type="number" min="1" max="10" />
+                    </label>
+                    <label class="form-field checkbox">
+                        <span>Overwrite existing date</span>
+                        <input id="random-overwrite" type="checkbox" checked />
+                    </label>
+                </div>
+
+                <div class="controls admin-controls">
+                    <button id="random-publish" class="btn-secondary" type="button">Save</button>
+                </div>
+            </div>
+        </section>
+
+        <section id="panel-custom" class="panel" role="tabpanel" aria-labelledby="tab-custom">
+            <h2 class="admin-panel-title">Create a custom puzzle</h2>
+            <p class="muted">Define constraints and generate a puzzle, then save it to a date.</p>
+
+            <form id="custom-form" class="admin-form" autocomplete="off">
+                <div class="form-row">
+                    <label class="form-field">
+                        <span>Date (UTC)</span>
+                        <input id="custom-date" type="date" required />
+                    </label>
+                    <label class="form-field">
+                        <span>Name</span>
+                        <input id="custom-name" type="text" placeholder="Daily Variant #1" />
+                    </label>
+                    <label class="form-field">
+                        <span>Author</span>
+                        <input id="custom-author" type="text" placeholder="Makudoku" />
+                    </label>
+                </div>
+
+                <div class="form-row">
+                    <label class="form-field">
+                        <span>Status</span>
+                        <select id="custom-status">
+                            <option value="draft">draft</option>
+                            <option value="published">published</option>
+                            <option value="archived">archived</option>
+                        </select>
+                    </label>
+                    <label class="form-field">
+                        <span>Difficulty</span>
+                        <input id="custom-difficulty" type="number" min="1" max="10" />
+                    </label>
+                    <label class="form-field">
+                        <span>Clue target</span>
+                        <input id="custom-clues" type="number" min="10" max="80" value="30" />
+                    </label>
+                    <label class="form-field">
+                        <span>Seed</span>
+                        <input id="custom-seed" type="number" placeholder="optional" />
+                    </label>
+                </div>
+
+                <div class="builder">
+                    <div class="builder-header">
+                        <h3>Constraint builder</h3>
+                        <p class="muted">Build constraints with forms or edit the JSON directly.</p>
+                    </div>
+
+                    <div class="builder-grid">
+                        <label class="form-field">
+                            <span>Type</span>
+                            <select id="constraint-type">
+                                <option value="kropki_white">kropki_white</option>
+                                <option value="kropki_black">kropki_black</option>
+                                <option value="thermo">thermo</option>
+                                <option value="arrow">arrow</option>
+                                <option value="killer">killer</option>
+                                <option value="king">king</option>
+                                <option value="knight">knight</option>
+                                <option value="queen">queen</option>
+                            </select>
+                        </label>
+
+                        <div class="builder-group" data-group="pair">
+                            <label class="form-field">
+                                <span>Cell A (row,col)</span>
+                                <input id="constraint-a" type="text" placeholder="0,0" />
+                            </label>
+                            <label class="form-field">
+                                <span>Cell B (row,col)</span>
+                                <input id="constraint-b" type="text" placeholder="0,1" />
+                            </label>
+                        </div>
+
+                        <div class="builder-group" data-group="path">
+                            <label class="form-field">
+                                <span>Path (rows,cols)</span>
+                                <input id="constraint-path" type="text" placeholder="0,0 0,1 0,2" />
+                            </label>
+                        </div>
+
+                        <div class="builder-group" data-group="killer">
+                            <label class="form-field">
+                                <span>Cells (rows,cols)</span>
+                                <input id="constraint-cells" type="text" placeholder="0,0 0,1 1,0" />
+                            </label>
+                            <label class="form-field">
+                                <span>Sum</span>
+                                <input id="constraint-sum" type="number" min="1" max="45" />
+                            </label>
+                            <label class="form-field checkbox">
+                                <span>No repeats</span>
+                                <input id="constraint-no-repeats" type="checkbox" checked />
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="controls admin-controls">
+                        <button id="constraint-add" class="btn-secondary" type="button">Add constraint</button>
+                        <button id="constraint-load" class="btn-secondary" type="button">Load from JSON</button>
+                        <button id="constraint-clear" class="btn-secondary" type="button">Clear list</button>
+                    </div>
+
+                    <ul id="constraint-list" class="constraint-list" aria-label="Constraint list"></ul>
+                </div>
+
+                <label class="form-field form-field-full">
+                    <span>Constraints (JSON array)</span>
+                    <textarea id="custom-constraints" rows="10" spellcheck="false">[
+  { "type": "kropki_white", "a": [0, 0], "b": [0, 1] },
+  { "type": "thermo", "path": [[3, 3], [4, 3], [5, 3]] },
+  { "type": "king" }
+]</textarea>
+                </label>
+
+                <div class="controls admin-controls">
+                    <label class="checkbox">
+                        <input id="custom-overwrite" type="checkbox" checked />
+                        <span>Overwrite existing date</span>
+                    </label>
+                    <button id="custom-generate" class="btn-secondary" type="button">Generate</button>
+                    <button id="custom-save" class="btn-primary" type="button">Save</button>
+                </div>
+            </form>
+        </section>
+
+        <section id="panel-review" class="panel" role="tabpanel" aria-labelledby="tab-review">
+            <h2 class="admin-panel-title">Review puzzles</h2>
+            <p class="muted">Load a puzzle by date and review it in the preview.</p>
+
+            <div class="review-toolbar">
+                <label class="form-field">
+                    <span>Date (UTC)</span>
+                    <input id="review-date" type="date" required />
+                </label>
+                <button id="review-load" class="btn-secondary" type="button">Load</button>
+            </div>
+        </section>
+
+        <section id="panel-analytics" class="panel" role="tabpanel" aria-labelledby="tab-analytics">
+            <h2 class="admin-panel-title">Daily analytics</h2>
+            <p class="muted">Counts are stored per UTC day.</p>
+
+            <div class="review-toolbar">
+                <label class="form-field">
+                    <span>Date (UTC)</span>
+                    <input id="analytics-date" type="date" required />
+                </label>
+                <button id="analytics-load" class="btn-secondary" type="button">Load</button>
+            </div>
+
+            <div class="analytics-grid">
+                <div class="analytics-card">
+                    <span class="analytics-label">Views</span>
+                    <strong id="stat-views">0</strong>
+                </div>
+                <div class="analytics-card">
+                    <span class="analytics-label">Checks</span>
+                    <strong id="stat-checks">0</strong>
+                </div>
+                <div class="analytics-card">
+                    <span class="analytics-label">Solves</span>
+                    <strong id="stat-solves">0</strong>
+                </div>
+            </div>
+        </section>
+
+        <section class="admin-preview" aria-label="Puzzle preview">
             <p id="status" class="muted">Loading puzzle…</p>
 
             <div class="game-layout">
@@ -42,6 +258,10 @@
                 </div>
 
                 <aside class="sidebar" aria-label="Puzzle controls">
+                    <div class="sidebar-header">
+                        <h3>Controls</h3>
+                        <button id="help-btn" class="help-btn" type="button" aria-label="Help">?</button>
+                    </div>
                     <div class="digit-pad" aria-label="Digit input">
                         <div class="numpad" aria-label="Digits 1 to 9">
                             <button id="mode-value" class="pad-btn mode icon-btn active" aria-pressed="true"
@@ -86,7 +306,6 @@
                             </button>
                         </div>
                     </div>
-
                 </aside>
             </div>
         </section>

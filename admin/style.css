@@ -28,10 +28,166 @@
     padding-top: 1rem;
 }
 
+.admin .panel:not(.active) {
+    display: none;
+}
+
 .admin .admin-panel-title {
     margin: 0.25rem 0 0;
 }
 
 .admin .admin-controls {
     margin-top: 0.75rem;
+}
+
+.admin .admin-form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-top: 1rem;
+}
+
+.admin .admin-form-compact {
+    margin-top: 0.75rem;
+}
+
+.admin .form-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 0.75rem;
+}
+
+.admin .form-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    font-size: 0.9rem;
+    color: #374151;
+}
+
+.admin .form-field-full {
+    width: 100%;
+}
+
+.admin .form-field input,
+.admin .form-field select,
+.admin .form-field textarea {
+    border: 1px solid #d1d5db;
+    border-radius: 10px;
+    padding: 0.55rem 0.75rem;
+    font-size: 0.95rem;
+    font-family: inherit;
+}
+
+.admin .form-field textarea {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+}
+
+.admin .checkbox {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+    color: #374151;
+}
+
+.admin .admin-preview {
+    margin-top: 1.5rem;
+}
+
+.admin .builder {
+    margin-top: 1rem;
+    padding: 1rem;
+    border-radius: 14px;
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+}
+
+.admin .builder-header h3 {
+    margin: 0;
+    font-size: 1rem;
+}
+
+.admin .builder-header .muted {
+    margin: 0.25rem 0 0.75rem;
+}
+
+.admin .builder-grid {
+    display: grid;
+    gap: 0.75rem;
+}
+
+.admin .builder-group {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 0.75rem;
+}
+
+.admin .constraint-list {
+    list-style: none;
+    margin: 0.75rem 0 0;
+    padding: 0;
+    display: grid;
+    gap: 0.5rem;
+}
+
+.admin .constraint-item {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 0.5rem;
+    align-items: center;
+    padding: 0.5rem 0.75rem;
+    border-radius: 10px;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+}
+
+.admin .constraint-item code {
+    font-size: 0.85rem;
+    color: #111827;
+}
+
+.admin .constraint-item button {
+    padding: 0.35rem 0.7rem;
+    border-radius: 999px;
+    border: none;
+    background: #fee2e2;
+    color: #991b1b;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.admin .review-toolbar {
+    display: flex;
+    align-items: flex-end;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    margin-top: 0.75rem;
+}
+
+.admin .analytics-grid {
+    margin-top: 0.75rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 0.75rem;
+}
+
+.admin .analytics-card {
+    padding: 0.75rem;
+    border-radius: 12px;
+    border: 1px solid #e5e7eb;
+    background: #fff;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.admin .analytics-card strong {
+    font-size: 1.6rem;
+    color: #111827;
+}
+
+.admin .analytics-label {
+    font-size: 0.85rem;
+    color: #6b7280;
 }

@@ -10,9 +10,17 @@
 </head>
 
 <body>
+    <header class="banner">
+        <div class="banner-inner">
+            <span class="banner-eyebrow">Makudoku</span>
+            <h1>Daily Sudoku</h1>
+            <p class="banner-subtitle">A fresh puzzle every day.</p>
+        </div>
+    </header>
+
     <main class="page">
-        <h1>Makudoku – Daily Sudoku</h1>
-        <p id="status">Loading puzzle…</p>
+        <h2 id="puzzle-title" class="puzzle-title"></h2>
+        <p id="status"></p>
 
         <div class="game-layout">
             <div id="puzzle-container">
@@ -21,6 +29,10 @@
             </div>
 
             <aside class="sidebar" aria-label="Puzzle controls">
+                <div class="sidebar-header">
+                    <h3>Controls</h3>
+                    <button id="help-btn" class="help-btn" type="button" aria-label="Help">?</button>
+                </div>
                 <div class="digit-pad" aria-label="Digit input">
                     <div class="numpad" aria-label="Digits 1 to 9">
                         <button id="mode-value" class="pad-btn mode icon-btn active" aria-pressed="true"

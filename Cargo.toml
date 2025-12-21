@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-makudoku = {path="/home/maggi/Documents/workspace/makudoku"}
+makudoku = {path="/home/maggi/Documents/workspace/app.makudoku/makudoku"}
 anyhow = "1.0.100"
 axum = "0.8.7"
 serde = { version="1.0.228", features=["derive"] }

@@ -2,6 +2,7 @@ const puzzleContainer = document.getElementById("puzzle-container");
 const svgRoot = document.getElementById("svg-root") || puzzleContainer;
 const variantsEl = document.getElementById("variants");
 const statusEl = document.getElementById("status");
+const puzzleTitleEl = document.getElementById("puzzle-title");
 const reloadBtn = document.getElementById("reload");
 const modeValueBtn = document.getElementById("mode-value");
 const modeCandidateBtn = document.getElementById("mode-candidate");
@@ -38,6 +39,12 @@ let currentState = null; // { values: (string|null)[], candidates: number[] }
 let undoStack = [];
 let redoStack = [];
 let solutionFlat = null; // string[81]
+let adminLastPuzzleJson = null;
+let adminLastSvg = null;
+let adminLastVariants = [];
+let currentPuzzleDate = null;
+let solvedForDate = false;
+let checkInFlight = false;
 
 const VARIANT_LABELS = {
   kropki_white: "Kropki (white)",
@@ -49,6 +56,29 @@ const VARIANT_LABELS = {
   knight: "Knight move",
   queen: "Queen move",
 };
+
+const VARIANT_DESCRIPTIONS = {
+  kropki_white: "White dots connect consecutive digits (difference of 1).",
+  kropki_black: "Black dots connect digits in a 1:2 ratio.",
+  thermo: "Thermo lines increase from bulb to tip.",
+  arrow: "Digits along the arrow sum to the circle value.",
+  killer: "Cages sum to the given total, no repeats in a cage.",
+  king: "Kings cannot be a single square apart.",
+  knight: "Knights cannot be a knight's move apart.",
+  queen: "Queens cannot be a diagonal step apart.",
+};
+
+function isTypingInInput() {
+  const el = document.activeElement;
+  if (!el) return false;
+  const tag = el.tagName ? el.tagName.toLowerCase() : "";
+  return (
+    tag === "input" ||
+    tag === "textarea" ||
+    tag === "select" ||
+    el.isContentEditable
+  );
+}
 
 function formatVariantLabel(kind) {
   if (VARIANT_LABELS[kind]) return VARIANT_LABELS[kind];
@@ -153,6 +183,97 @@ function showModal(title, message) {
   ok.focus();
 }
 
+function showHelpModal() {
+  const backdrop = document.createElement("div");
+  backdrop.className = "modal-backdrop";
+  backdrop.setAttribute("role", "dialog");
+  backdrop.setAttribute("aria-modal", "true");
+
+  const modal = document.createElement("div");
+  modal.className = "modal";
+
+  const h2 = document.createElement("h2");
+  h2.textContent = "Puzzle help";
+
+  const variantsTitle = document.createElement("h3");
+  variantsTitle.textContent = "Variants";
+
+  const variantsList = document.createElement("ul");
+  variantsList.className = "help-list";
+
+  const variantItems = Array.isArray(variants) ? variants : [];
+  if (variantItems.length === 0) {
+    const li = document.createElement("li");
+    li.textContent = "Classic sudoku rules only.";
+    variantsList.appendChild(li);
+  } else {
+    variantItems.forEach((kind) => {
+      const li = document.createElement("li");
+      const label = formatVariantLabel(kind);
+      const desc = VARIANT_DESCRIPTIONS[kind] || "Special constraint applies.";
+      li.textContent = `${label}: ${desc}`;
+      variantsList.appendChild(li);
+    });
+  }
+
+  const numpadTitle = document.createElement("h3");
+  numpadTitle.textContent = "Numpad";
+
+  const numpadList = document.createElement("ul");
+  numpadList.className = "help-list";
+  [
+    "Value mode: place digits in cells.",
+    "Candidate mode: toggle pencil marks.",
+    "Hold Shift to temporarily enter candidate mode.",
+    "Multi-select: toggle multiple cells at once.",
+    "Check: compare entries against the solution (if available).",
+    "Undo/Redo: revert or reapply moves.",
+    "Erase: clear values or candidates.",
+    "Keyboard: 1-9 to enter, 0/Backspace/Delete to erase, arrows to move.",
+  ].forEach((text) => {
+    const li = document.createElement("li");
+    li.textContent = text;
+    numpadList.appendChild(li);
+  });
+
+  const actions = document.createElement("div");
+  actions.className = "modal-actions";
+
+  const ok = document.createElement("button");
+  ok.className = "btn-primary";
+  ok.type = "button";
+  ok.textContent = "OK";
+
+  const close = () => {
+    document.removeEventListener("keydown", onKeyDown);
+    backdrop.remove();
+  };
+
+  const onKeyDown = (e) => {
+    if (e.key === "Escape") {
+      e.preventDefault();
+      close();
+    }
+  };
+
+  ok.addEventListener("click", close);
+  backdrop.addEventListener("click", (e) => {
+    if (e.target === backdrop) close();
+  });
+
+  actions.appendChild(ok);
+  modal.appendChild(h2);
+  modal.appendChild(variantsTitle);
+  modal.appendChild(variantsList);
+  modal.appendChild(numpadTitle);
+  modal.appendChild(numpadList);
+  modal.appendChild(actions);
+  backdrop.appendChild(modal);
+  document.body.appendChild(backdrop);
+  document.addEventListener("keydown", onKeyDown);
+  ok.focus();
+}
+
 function isBoardCorrectSoFar() {
   if (!solutionFlat || !currentState) return null; // unknown
 
@@ -164,6 +285,71 @@ function isBoardCorrectSoFar() {
   return true;
 }
 
+function buildFullGridValues() {
+  if (!currentState) return null;
+  const values = Array(81).fill(null);
+
+  const givens = svg?.querySelectorAll("#givens text.given") ?? [];
+  givens.forEach((node) => {
+    const r = Number(node.dataset.row);
+    const c = Number(node.dataset.col);
+    const text = node.textContent?.trim() || "";
+    if (r >= 0 && c >= 0 && /^[1-9]$/.test(text)) {
+      values[cellIndex(r, c)] = text;
+    }
+  });
+
+  currentState.values.forEach((v, idx) => {
+    if (v && /^[1-9]$/.test(v)) {
+      values[idx] = v;
+    }
+  });
+
+  return values;
+}
+
+function buildGridString() {
+  const values = buildFullGridValues();
+  if (!values) return null;
+  return values.map((v) => (v && /^[1-9]$/.test(v) ? v : ".")).join("");
+}
+
+function isGridComplete() {
+  const values = buildFullGridValues();
+  if (!values) return false;
+  return values.every((v) => v && /^[1-9]$/.test(v));
+}
+
+function maybeCheckSolved() {
+  if (document.body.classList.contains("admin")) return;
+  if (!currentPuzzleDate || solvedForDate || checkInFlight) return;
+  if (!isGridComplete()) return;
+
+  const grid = buildGridString();
+  if (!grid) return;
+
+  checkInFlight = true;
+  fetch("/api/puzzle/check", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify({ grid }),
+  })
+    .then((res) => (res.ok ? res.json() : Promise.reject(res)))
+    .then((data) => {
+      if (data?.status === "complete") {
+        solvedForDate = true;
+        saveProgress();
+        showModal("Congratulations", "You solved today's puzzle!");
+      }
+    })
+    .catch((err) => {
+      console.warn("Auto-check failed", err);
+    })
+    .finally(() => {
+      checkInFlight = false;
+    });
+}
+
 function pushUndo(state) {
   undoStack.push(cloneState(state));
   if (undoStack.length > UNDO_LIMIT) {
@@ -171,6 +357,59 @@ function pushUndo(state) {
   }
   redoStack = [];
   updateUndoRedoUi();
+}
+
+function storageKey() {
+  if (!currentPuzzleDate) return null;
+  return `makudoku-progress-${currentPuzzleDate}`;
+}
+
+function saveProgress() {
+  if (document.body.classList.contains("admin")) return;
+  const key = storageKey();
+  if (!key || !currentState) return;
+  const payload = {
+    values: currentState.values,
+    candidates: currentState.candidates,
+    solved: solvedForDate,
+  };
+  try {
+    localStorage.setItem(key, JSON.stringify(payload));
+  } catch (err) {
+    console.warn("Failed to save progress", err);
+  }
+}
+
+function loadProgress() {
+  solvedForDate = false;
+  const key = storageKey();
+  if (!key) return;
+  const raw = localStorage.getItem(key);
+  if (!raw) return;
+  try {
+    const parsed = JSON.parse(raw);
+    if (
+      !parsed ||
+      !Array.isArray(parsed.values) ||
+      !Array.isArray(parsed.candidates)
+    ) {
+      return;
+    }
+    if (parsed.values.length !== 81 || parsed.candidates.length !== 81) {
+      return;
+    }
+    currentState = {
+      values: parsed.values.slice(),
+      candidates: parsed.candidates.slice(),
+    };
+    solvedForDate = parsed.solved === true;
+    applyStateToSvg(currentState);
+    undoStack = [];
+    redoStack = [];
+    updateUndoRedoUi();
+  } catch (err) {
+    console.warn("Failed to load progress", err);
+  }
 }
 
 function applyStateToSvg(state) {
@@ -293,7 +532,9 @@ async function loadPuzzle() {
     setMultiSelect(false);
 
     const endpoint = getPuzzleEndpoint();
+    const usePost = endpoint.startsWith("/api/admin/puzzles/generate");
     const res = await fetch(endpoint, {
+      method: usePost ? "POST" : "GET",
       headers: { Accept: "application/json" },
     });
 
@@ -303,22 +544,7 @@ async function loadPuzzle() {
     }
 
     const data = await res.json(); // { svg: string, solution: number[] }
-
-    if (svgRoot) svgRoot.innerHTML = data.svg;
-
-    // Init interaction with the *new* SVG
-    initSvgInteraction();
-    initStateFromSvg();
-
-    currentSolution = Array.isArray(data.solution) ? data.solution : [];
-    variants = Array.isArray(data.variants) ? data.variants : [];
-    renderVariants(variants);
-    statusEl.textContent = "Puzzle loaded.";
-    if (currentSolution.length === 81) {
-      solutionFlat = currentSolution.map((n) => String(n));
-    } else {
-      solutionFlat = null;
-    }
+    applyPuzzleData(data, "");
   } catch (err) {
     console.error(err);
     statusEl.textContent = "Failed to load puzzle.";
@@ -329,6 +555,62 @@ async function loadPuzzle() {
     } else {
       puzzleContainer.innerHTML =
         "<p>Something went wrong loading the puzzle. Try again.</p>";
+    }
+  }
+}
+
+function extractSolution(data) {
+  if (Array.isArray(data.solution) && data.solution.length === 81) {
+    return data.solution.map((n) => String(n));
+  }
+  if (typeof data.puzzle_json === "string") {
+    try {
+      const parsed = JSON.parse(data.puzzle_json);
+      if (Array.isArray(parsed.solution) && parsed.solution.length === 81) {
+        return parsed.solution.map((n) => String(n));
+      }
+    } catch (err) {
+      console.warn("Failed to parse puzzle_json for solution", err);
+    }
+  }
+  return null;
+}
+
+function applyPuzzleData(data, message) {
+  if (!data || !data.svg) {
+    statusEl.textContent = "No puzzle data to display.";
+    return;
+  }
+
+  if (svgRoot) svgRoot.innerHTML = data.svg;
+
+  initSvgInteraction();
+  initStateFromSvg();
+
+  const solution = extractSolution(data);
+  currentSolution = solution ? solution.map(Number) : [];
+  solutionFlat = solution ?? null;
+
+  variants = Array.isArray(data.variants) ? data.variants : [];
+  renderVariants(variants);
+  statusEl.textContent = message || "";
+  if (puzzleTitleEl) {
+    puzzleTitleEl.textContent = data.title || "";
+  }
+
+  if (document.body.classList.contains("admin")) {
+    adminLastPuzzleJson = data.puzzle_json || null;
+    adminLastSvg = data.svg || null;
+    adminLastVariants = Array.isArray(data.variants) ? data.variants : [];
+  } else {
+    currentPuzzleDate = data.date_utc || null;
+    loadProgress();
+    if (currentPuzzleDate) {
+      fetch("/api/puzzle/track", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({ event: "view" }),
+      }).catch((err) => console.warn("Track view failed", err));
     }
   }
 }
@@ -357,6 +639,7 @@ modeCandidateBtn.addEventListener("click", () => setMode("candidate"));
 
 // Hold Shift to temporarily enter candidate mode (only if you were in value mode).
 document.addEventListener("keydown", (e) => {
+  if (isTypingInInput()) return;
   if (e.key !== "Shift") return;
   if (shiftCandidateActive) return;
 
@@ -371,6 +654,7 @@ document.addEventListener("keydown", (e) => {
 });
 
 document.addEventListener("keyup", (e) => {
+  if (isTypingInInput()) return;
   if (e.key !== "Shift") return;
   if (!shiftCandidateActive) return;
 
@@ -459,6 +743,8 @@ function handleDigitInput(value, isDelete) {
   currentState = next;
   applyStateToSvg(currentState);
   if (updateSelectionStylesFn) updateSelectionStylesFn();
+  saveProgress();
+  maybeCheckSolved();
 }
 
 function digitFromKeyEvent(event) {
@@ -496,6 +782,7 @@ function undo() {
   applyStateToSvg(currentState);
   updateUndoRedoUi();
   if (updateSelectionStylesFn) updateSelectionStylesFn();
+  saveProgress();
 }
 
 function redo() {
@@ -505,6 +792,7 @@ function redo() {
   applyStateToSvg(currentState);
   updateUndoRedoUi();
   if (updateSelectionStylesFn) updateSelectionStylesFn();
+  saveProgress();
 }
 
 if (undoBtn) undoBtn.addEventListener("click", undo);
@@ -512,17 +800,47 @@ if (redoBtn) redoBtn.addEventListener("click", redo);
 
 if (checkBtn) {
   checkBtn.addEventListener("click", () => {
-    const ok = isBoardCorrectSoFar();
-    if (ok === null) {
-      showModal(
-        "Check",
-        "No solution is available right now, so I can't validate this puzzle."
-      );
-    } else if (ok) {
-      showModal("Looks good", "Everything is looking correct so far.");
-    } else {
-      showModal("Not quite", "There is an error somewhere.");
-    }
+    const grid = buildGridString();
+    if (!grid) return;
+
+    fetch("/api/puzzle/check", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({ grid }),
+    })
+      .then(async (res) => {
+        if (!res.ok) {
+          const text = await res.text();
+          throw new Error(text || `Server error: ${res.status}`);
+        }
+        return res.json();
+      })
+      .then((data) => {
+        const status = data?.status;
+        if (status === "complete") {
+          showModal("Solved", "You completed the puzzle.");
+        } else if (status === "partial") {
+          showModal("Looks good", "Everything is looking correct so far.");
+        } else if (status === "incorrect") {
+          showModal("Not quite", "There is an error somewhere.");
+        } else {
+          showModal(
+            "Check",
+            "No solution is available right now, so I can't validate this puzzle."
+          );
+        }
+      })
+      .catch((err) => {
+        console.error(err);
+        showModal("Check failed", err.message || String(err));
+      });
+  });
+}
+
+const helpBtn = document.getElementById("help-btn");
+if (helpBtn) {
+  helpBtn.addEventListener("click", () => {
+    showHelpModal();
   });
 }
 
@@ -734,6 +1052,7 @@ function initSvgInteraction() {
     document.removeEventListener("keydown", keydownHandler);
   }
   keydownHandler = (e) => {
+    if (isTypingInInput()) return;
     if (!highlightCells.length || !userLayer || !candLayer) return;
 
     const isMac = /Mac|iPhone|iPad|iPod/.test(navigator.platform);
@@ -808,4 +1127,462 @@ function cellCenter(rect) {
 
 // ---------- Initial load ----------
 
+function initAdminTabs() {
+  const tabs = Array.from(document.querySelectorAll(".tab"));
+  const panels = Array.from(document.querySelectorAll(".panel"));
+  if (!tabs.length || !panels.length) return;
+
+  const setActive = (tabId) => {
+    tabs.forEach((tab) => {
+      const isActive = tab.id === tabId;
+      tab.classList.toggle("active", isActive);
+      tab.setAttribute("aria-selected", isActive ? "true" : "false");
+      const panelId = tab.getAttribute("aria-controls");
+      const panel = panelId ? document.getElementById(panelId) : null;
+      if (panel) panel.classList.toggle("active", isActive);
+    });
+  };
+
+  tabs.forEach((tab) => {
+    tab.addEventListener("click", () => {
+      setActive(tab.id);
+    });
+  });
+}
+
+async function loadReviewPuzzle(date) {
+  try {
+    statusEl.textContent = "Loading puzzle…";
+    const res = await fetch(`/api/admin/puzzles/${date}`, {
+      headers: { Accept: "application/json" },
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(text || `Server error: ${res.status}`);
+    }
+    const data = await res.json();
+    applyPuzzleData(data, "");
+  } catch (err) {
+    console.error(err);
+    statusEl.textContent = "Failed to load puzzle.";
+    showModal("Load failed", err.message || String(err));
+  }
+}
+
+function initAdminReviewPicker() {
+  const dateInput = document.getElementById("review-date");
+  const loadBtn = document.getElementById("review-load");
+  if (!dateInput || !loadBtn) return;
+
+  const today = new Date();
+  if (!dateInput.value) {
+    const utcDate = new Date(
+      Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate())
+    );
+    dateInput.value = utcDate.toISOString().slice(0, 10);
+  }
+
+  loadBtn.addEventListener("click", () => {
+    if (!dateInput.value) {
+      showModal("Missing date", "Please choose a UTC date to load.");
+      return;
+    }
+    loadReviewPuzzle(dateInput.value);
+  });
+}
+
+function initAdminAnalytics() {
+  const dateInput = document.getElementById("analytics-date");
+  const loadBtn = document.getElementById("analytics-load");
+  const viewsEl = document.getElementById("stat-views");
+  const checksEl = document.getElementById("stat-checks");
+  const solvesEl = document.getElementById("stat-solves");
+  if (!dateInput || !loadBtn) return;
+
+  const today = new Date();
+  if (!dateInput.value) {
+    const utcDate = new Date(
+      Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate())
+    );
+    dateInput.value = utcDate.toISOString().slice(0, 10);
+  }
+
+  const loadStats = async () => {
+    if (!dateInput.value) return;
+    try {
+      const res = await fetch(`/api/admin/stats/${dateInput.value}`, {
+        headers: { Accept: "application/json" },
+      });
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || `Server error: ${res.status}`);
+      }
+      const data = await res.json();
+      if (viewsEl) viewsEl.textContent = String(data.views ?? 0);
+      if (checksEl) checksEl.textContent = String(data.checks ?? 0);
+      if (solvesEl) solvesEl.textContent = String(data.solves ?? 0);
+    } catch (err) {
+      console.error(err);
+      if (viewsEl) viewsEl.textContent = "0";
+      if (checksEl) checksEl.textContent = "0";
+      if (solvesEl) solvesEl.textContent = "0";
+      showModal("Analytics failed", err.message || String(err));
+    }
+  };
+
+  loadBtn.addEventListener("click", loadStats);
+}
+function parseConstraintsInput(raw) {
+  const parsed = JSON.parse(raw);
+  if (Array.isArray(parsed)) return parsed;
+  if (parsed && Array.isArray(parsed.constraints)) return parsed.constraints;
+  throw new Error("Constraints must be a JSON array or object with constraints.");
+}
+
+function initAdminCustomForm() {
+  const form = document.getElementById("custom-form");
+  if (!form) return;
+
+  const dateInput = document.getElementById("custom-date");
+  const nameInput = document.getElementById("custom-name");
+  const authorInput = document.getElementById("custom-author");
+  const statusInput = document.getElementById("custom-status");
+  const difficultyInput = document.getElementById("custom-difficulty");
+  const cluesInput = document.getElementById("custom-clues");
+  const seedInput = document.getElementById("custom-seed");
+  const constraintsInput = document.getElementById("custom-constraints");
+  const overwriteInput = document.getElementById("custom-overwrite");
+  const generateBtn = document.getElementById("custom-generate");
+  const saveBtn = document.getElementById("custom-save");
+  const constraintType = document.getElementById("constraint-type");
+  const constraintA = document.getElementById("constraint-a");
+  const constraintB = document.getElementById("constraint-b");
+  const constraintPath = document.getElementById("constraint-path");
+  const constraintCells = document.getElementById("constraint-cells");
+  const constraintSum = document.getElementById("constraint-sum");
+  const constraintNoRepeats = document.getElementById("constraint-no-repeats");
+  const constraintAdd = document.getElementById("constraint-add");
+  const constraintLoad = document.getElementById("constraint-load");
+  const constraintClear = document.getElementById("constraint-clear");
+  const constraintList = document.getElementById("constraint-list");
+
+  let lastPuzzleJson = null;
+  let lastSvg = null;
+  let lastVariants = [];
+  let constraintItems = [];
+
+  const today = new Date();
+  if (dateInput && !dateInput.value) {
+    const utcDate = new Date(
+      Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate())
+    );
+    dateInput.value = utcDate.toISOString().slice(0, 10);
+  }
+
+  const builderGroups = Array.from(
+    document.querySelectorAll(".builder-group")
+  );
+
+  const setBuilderGroupVisibility = (value) => {
+    const show = value || "kropki_white";
+    builderGroups.forEach((group) => {
+      const type = group.dataset.group;
+      const shouldShow =
+        (type === "pair" && (show === "kropki_white" || show === "kropki_black")) ||
+        (type === "path" && (show === "thermo" || show === "arrow")) ||
+        (type === "killer" && show === "killer");
+      group.style.display = shouldShow ? "grid" : "none";
+    });
+  };
+
+  setBuilderGroupVisibility(constraintType?.value);
+  constraintType?.addEventListener("change", (event) => {
+    setBuilderGroupVisibility(event.target.value);
+  });
+
+  const parseCell = (token) => {
+    const parts = token.split(",").map((p) => p.trim());
+    if (parts.length !== 2) throw new Error("Cell must be row,col");
+    const r = Number(parts[0]);
+    const c = Number(parts[1]);
+    if (!Number.isFinite(r) || !Number.isFinite(c)) {
+      throw new Error("Cell must be numeric row,col");
+    }
+    return [r, c];
+  };
+
+  const parseCells = (raw) => {
+    const tokens = raw
+      .split(/\s+/)
+      .map((t) => t.trim())
+      .filter(Boolean);
+    if (!tokens.length) {
+      throw new Error("Provide at least one cell");
+    }
+    return tokens.map(parseCell);
+  };
+
+  const renderConstraintList = () => {
+    if (!constraintList) return;
+    constraintList.innerHTML = "";
+    if (!constraintItems.length) {
+      const empty = document.createElement("li");
+      empty.className = "muted";
+      empty.textContent = "No constraints yet.";
+      constraintList.appendChild(empty);
+      return;
+    }
+    constraintItems.forEach((item, idx) => {
+      const li = document.createElement("li");
+      li.className = "constraint-item";
+
+      const code = document.createElement("code");
+      code.textContent = JSON.stringify(item);
+
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.textContent = "Remove";
+      btn.addEventListener("click", () => {
+        constraintItems.splice(idx, 1);
+        renderConstraintList();
+        syncConstraintsTextarea();
+      });
+
+      li.appendChild(code);
+      li.appendChild(btn);
+      constraintList.appendChild(li);
+    });
+  };
+
+  const syncConstraintsTextarea = () => {
+    if (!constraintsInput) return;
+    constraintsInput.value = JSON.stringify(constraintItems, null, 2);
+  };
+
+  const loadConstraintsFromTextarea = () => {
+    if (!constraintsInput) return;
+    let parsed;
+    try {
+      parsed = parseConstraintsInput(constraintsInput.value.trim());
+    } catch (err) {
+      showModal("Invalid JSON", err.message || String(err));
+      return;
+    }
+    if (!Array.isArray(parsed)) {
+      showModal("Invalid constraints", "Constraints must be a JSON array.");
+      return;
+    }
+    constraintItems = parsed;
+    renderConstraintList();
+  };
+
+  constraintAdd?.addEventListener("click", () => {
+    const type = constraintType?.value || "kropki_white";
+    try {
+      let item = null;
+      if (type === "kropki_white" || type === "kropki_black") {
+        const a = parseCell(constraintA?.value?.trim() || "");
+        const b = parseCell(constraintB?.value?.trim() || "");
+        item = { type, a, b };
+      } else if (type === "thermo" || type === "arrow") {
+        const path = parseCells(constraintPath?.value?.trim() || "");
+        item = { type, path };
+      } else if (type === "killer") {
+        const cells = parseCells(constraintCells?.value?.trim() || "");
+        const sum = Number(constraintSum?.value ?? "");
+        if (!Number.isFinite(sum)) {
+          throw new Error("Killer sum must be a number");
+        }
+        item = {
+          type,
+          cells,
+          sum,
+          no_repeats: constraintNoRepeats?.checked ?? true,
+        };
+      } else {
+        item = { type };
+      }
+
+      constraintItems.push(item);
+      renderConstraintList();
+      syncConstraintsTextarea();
+    } catch (err) {
+      showModal("Invalid constraint", err.message || String(err));
+    }
+  });
+
+  constraintLoad?.addEventListener("click", () => {
+    loadConstraintsFromTextarea();
+    syncConstraintsTextarea();
+  });
+
+  constraintClear?.addEventListener("click", () => {
+    constraintItems = [];
+    renderConstraintList();
+    syncConstraintsTextarea();
+  });
+
+  loadConstraintsFromTextarea();
+  syncConstraintsTextarea();
+
+  generateBtn?.addEventListener("click", async () => {
+    if (!constraintsInput) return;
+    let constraints;
+    try {
+      constraints = parseConstraintsInput(constraintsInput.value.trim());
+    } catch (err) {
+      showModal("Invalid constraints", err.message || String(err));
+      return;
+    }
+
+    const clueTarget = Number.parseInt(cluesInput?.value ?? "", 10);
+    const seedValue = Number.parseInt(seedInput?.value ?? "", 10);
+
+    const payload = {
+      constraints,
+      clue_target: Number.isFinite(clueTarget) ? clueTarget : undefined,
+      seed: Number.isFinite(seedValue) ? seedValue : undefined,
+    };
+
+    try {
+      statusEl.textContent = "Generating puzzle…";
+      const res = await fetch("/api/admin/puzzles/generate/custom", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || `Server error: ${res.status}`);
+      }
+      const data = await res.json();
+      lastPuzzleJson = data.puzzle_json || null;
+      lastSvg = data.svg || null;
+      lastVariants = Array.isArray(data.variants) ? data.variants : [];
+      applyPuzzleData(data, "Custom puzzle generated.");
+    } catch (err) {
+      console.error(err);
+      statusEl.textContent = "Failed to generate puzzle.";
+      showModal("Generate failed", err.message || String(err));
+    }
+  });
+
+  saveBtn?.addEventListener("click", async () => {
+    if (!lastPuzzleJson || !lastSvg) {
+      showModal("Nothing to save", "Generate a puzzle first.");
+      return;
+    }
+    if (!dateInput?.value) {
+      showModal("Missing date", "Please choose a UTC date to save.");
+      return;
+    }
+
+    const difficultyValue = Number.parseInt(difficultyInput?.value ?? "", 10);
+
+    const payload = {
+      date_utc: dateInput.value,
+      puzzle_json: lastPuzzleJson,
+      svg: lastSvg,
+      variants: lastVariants,
+      name: nameInput?.value?.trim() || null,
+      author: authorInput?.value?.trim() || null,
+      status: statusInput?.value || "draft",
+      difficulty: Number.isFinite(difficultyValue) ? difficultyValue : null,
+      overwrite: overwriteInput?.checked ?? true,
+    };
+
+    try {
+      statusEl.textContent = "Saving puzzle…";
+      const res = await fetch("/api/admin/puzzles", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || `Server error: ${res.status}`);
+      }
+      await res.json();
+      statusEl.textContent = "Puzzle saved.";
+      showModal("Saved", "Puzzle stored successfully.");
+    } catch (err) {
+      console.error(err);
+      statusEl.textContent = "Failed to save puzzle.";
+      showModal("Save failed", err.message || String(err));
+    }
+  });
+}
+
+function initAdminRandomPublish() {
+  const dateInput = document.getElementById("random-date");
+  const nameInput = document.getElementById("random-name");
+  const authorInput = document.getElementById("random-author");
+  const statusInput = document.getElementById("random-status");
+  const difficultyInput = document.getElementById("random-difficulty");
+  const overwriteInput = document.getElementById("random-overwrite");
+  const publishBtn = document.getElementById("random-publish");
+
+  if (!publishBtn) return;
+
+  const today = new Date();
+  if (dateInput && !dateInput.value) {
+    const utcDate = new Date(
+      Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate())
+    );
+    dateInput.value = utcDate.toISOString().slice(0, 10);
+  }
+
+  publishBtn.addEventListener("click", async () => {
+    if (!adminLastPuzzleJson || !adminLastSvg) {
+      showModal("Nothing to save", "Generate a puzzle first.");
+      return;
+    }
+    if (!dateInput?.value) {
+      showModal("Missing date", "Please choose a UTC date to save.");
+      return;
+    }
+
+    const difficultyValue = Number.parseInt(difficultyInput?.value ?? "", 10);
+    const payload = {
+      date_utc: dateInput.value,
+      puzzle_json: adminLastPuzzleJson,
+      svg: adminLastSvg,
+      variants: adminLastVariants,
+      name: nameInput?.value?.trim() || null,
+      author: authorInput?.value?.trim() || null,
+      status: statusInput?.value || "published",
+      difficulty: Number.isFinite(difficultyValue) ? difficultyValue : null,
+      overwrite: overwriteInput?.checked ?? true,
+    };
+
+    try {
+      statusEl.textContent = "Saving puzzle…";
+      const res = await fetch("/api/admin/puzzles", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || `Server error: ${res.status}`);
+      }
+      await res.json();
+      statusEl.textContent = "Puzzle saved.";
+      showModal("Saved", "Puzzle stored successfully.");
+    } catch (err) {
+      console.error(err);
+      statusEl.textContent = "Failed to save puzzle.";
+      showModal("Save failed", err.message || String(err));
+    }
+  });
+}
+
 loadPuzzle();
+
+if (document.body.classList.contains("admin")) {
+  initAdminTabs();
+  initAdminCustomForm();
+  initAdminRandomPublish();
+  initAdminReviewPicker();
+  initAdminAnalytics();
+}
