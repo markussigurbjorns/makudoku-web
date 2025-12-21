@@ -228,33 +228,40 @@ async fn random_puzzle_handler() -> impl IntoResponse {
     let cfg = GenerationConfig::default();
     let render_options = RenderOptions::default();
 
-    let puzzle = match generate_random_variant_puzzle(cfg) {
-        Ok(p) => p,
-        Err(e) => {
+    let result = tokio::task::spawn_blocking(move || {
+        let puzzle = generate_random_variant_puzzle(cfg)?;
+        let puzzle_svg =
+            render_puzzle_svg(&puzzle.puzzle, &puzzle.engine.constraints, render_options)?;
+        let variants = variant_kinds(&puzzle.constraints);
+        Ok::<_, String>((puzzle_svg, variants))
+    })
+    .await;
+
+    let result = match result {
+        Ok(result) => result,
+        Err(err) => {
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                format!("Failed to generate puzzle: {e}"),
+                format!("Generator task failed: {err}"),
             )
                 .into_response();
         }
     };
 
-    let puzzle_svg =
-        match render_puzzle_svg(&puzzle.puzzle, &puzzle.engine.constraints, render_options) {
-            Ok(svg) => svg,
-            Err(err) => {
-                return (
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    format!("Failed to render puzzle: {err}"),
-                )
-                    .into_response();
-            }
-        };
+    let (puzzle_svg, variants) = match result {
+        Ok(result) => result,
+        Err(err) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("Failed to generate puzzle: {err}"),
+            )
+                .into_response();
+        }
+    };
 
-    let variants = variant_kinds(&puzzle.constraints);
     Json(PuzzleResponse {
         svg: Some(puzzle_svg),
-        variants: variants,
+        variants,
         title: None,
         date_utc: None,
     })
@@ -718,43 +725,48 @@ async fn admin_generate_handler() -> impl IntoResponse {
     let cfg = GenerationConfig::default();
     let render_options = RenderOptions::default();
 
-    let puzzle = match generate_random_variant_puzzle(cfg) {
-        Ok(p) => p,
-        Err(e) => {
+    let result = tokio::task::spawn_blocking(move || {
+        let puzzle = generate_random_variant_puzzle(cfg)?;
+        let puzzle_svg =
+            render_puzzle_svg(&puzzle.puzzle, &puzzle.engine.constraints, render_options)?;
+        let variants = variant_kinds(&puzzle.constraints);
+        let constraints_json = variant_specs_to_json(&puzzle.constraints);
+        let puzzle_json = serde_json::json!({
+            "puzzle": puzzle.puzzle,
+            "solution": puzzle.solution.to_vec(),
+            "constraints": constraints_json,
+            "seed": puzzle.seed,
+            "clue_count": puzzle.clue_count,
+            "symmetry": puzzle.symmetry.map(|s| format!("{s:?}")),
+        });
+        Ok::<_, String>((puzzle_svg, variants, puzzle_json.to_string()))
+    })
+    .await;
+
+    let result = match result {
+        Ok(result) => result,
+        Err(err) => {
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                format!("Failed to generate puzzle: {e}"),
+                format!("Generator task failed: {err}"),
             )
                 .into_response();
         }
     };
 
-    let puzzle_svg =
-        match render_puzzle_svg(&puzzle.puzzle, &puzzle.engine.constraints, render_options) {
-            Ok(svg) => svg,
-            Err(err) => {
-                return (
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    format!("Failed to render puzzle: {err}"),
-                )
-                    .into_response();
-            }
-        };
-
-    let variants = variant_kinds(&puzzle.constraints);
-    let constraints_json = variant_specs_to_json(&puzzle.constraints);
-
-    let puzzle_json = serde_json::json!({
-        "puzzle": puzzle.puzzle,
-        "solution": puzzle.solution.to_vec(),
-        "constraints": constraints_json,
-        "seed": puzzle.seed,
-        "clue_count": puzzle.clue_count,
-        "symmetry": puzzle.symmetry.map(|s| format!("{s:?}")),
-    });
+    let (puzzle_svg, variants, puzzle_json) = match result {
+        Ok(result) => result,
+        Err(err) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("Failed to generate puzzle: {err}"),
+            )
+                .into_response();
+        }
+    };
 
     Json(AdminGenerateResponse {
-        puzzle_json: puzzle_json.to_string(),
+        puzzle_json,
         svg: puzzle_svg,
         variants,
     })
@@ -829,63 +841,62 @@ fn generate_puzzle_from_solution(
 async fn admin_generate_custom_handler(
     Json(req): Json<AdminGenerateCustomRequest>,
 ) -> impl IntoResponse {
-    let constraints = match normalize_constraints_input(req.constraints) {
-        Ok(list) => list,
-        Err(err) => return (StatusCode::BAD_REQUEST, err).into_response(),
-    };
+    let result = tokio::task::spawn_blocking(move || {
+        let constraints = normalize_constraints_input(req.constraints)?;
+        let specs = constraints_from_json(&constraints)?;
 
-    let specs = match constraints_from_json(&constraints) {
-        Ok(specs) => specs,
-        Err(err) => return (StatusCode::BAD_REQUEST, err).into_response(),
-    };
+        let mut rng = match req.seed {
+            Some(seed) => SimpleRng::from_seed(seed),
+            None => SimpleRng::new(),
+        };
+        let seed = req.seed.unwrap_or_else(|| rng.seed());
 
-    let mut rng = match req.seed {
-        Some(seed) => SimpleRng::from_seed(seed),
-        None => SimpleRng::new(),
-    };
-    let seed = req.seed.unwrap_or_else(|| rng.seed());
+        let solution = generate_full_solution_with(rng.clone(), |eng| {
+            apply_variant_specs(eng, &specs);
+        })?;
 
-    let solution = match generate_full_solution_with(rng.clone(), |eng| {
-        apply_variant_specs(eng, &specs);
-    }) {
-        Ok(sol) => sol,
-        Err(err) => return (StatusCode::INTERNAL_SERVER_ERROR, err).into_response(),
-    };
+        let clue_target = req.clue_target.unwrap_or(30);
+        let puzzle = generate_puzzle_from_solution(&solution, clue_target, &specs, &mut rng)?;
 
-    let clue_target = req.clue_target.unwrap_or(30);
-    let puzzle = match generate_puzzle_from_solution(&solution, clue_target, &specs, &mut rng) {
-        Ok(puzzle) => puzzle,
-        Err(err) => return (StatusCode::BAD_REQUEST, err).into_response(),
-    };
+        let constraints_json = constraints;
+        let variants = variant_kinds(&specs);
+        let clue_count = puzzle.chars().filter(|c| *c != '.').count();
 
-    let constraints_json = constraints;
-    let variants = variant_kinds(&specs);
-    let clue_count = puzzle.chars().filter(|c| *c != '.').count();
+        let puzzle_json = serde_json::json!({
+            "puzzle": puzzle,
+            "solution": solution.to_vec(),
+            "constraints": constraints_json,
+            "seed": seed,
+            "clue_count": clue_count,
+            "symmetry": null,
+        });
 
-    let puzzle_json = serde_json::json!({
-        "puzzle": puzzle,
-        "solution": solution.to_vec(),
-        "constraints": constraints_json,
-        "seed": seed,
-        "clue_count": clue_count,
-        "symmetry": null,
-    });
+        let render_options = RenderOptions::default();
+        let constraints_render = engine_constraints_from_specs(&specs);
+        let puzzle_svg = render_puzzle_svg(&puzzle, &constraints_render, render_options)?;
 
-    let render_options = RenderOptions::default();
-    let constraints_render = engine_constraints_from_specs(&specs);
-    let puzzle_svg = match render_puzzle_svg(&puzzle, &constraints_render, render_options) {
-        Ok(svg) => svg,
+        Ok::<_, String>((puzzle_svg, variants, puzzle_json.to_string()))
+    })
+    .await;
+
+    let result = match result {
+        Ok(result) => result,
         Err(err) => {
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                format!("Failed to render puzzle: {err}"),
+                format!("Generator task failed: {err}"),
             )
                 .into_response();
         }
     };
 
+    let (puzzle_svg, variants, puzzle_json) = match result {
+        Ok(result) => result,
+        Err(err) => return (StatusCode::BAD_REQUEST, err).into_response(),
+    };
+
     Json(AdminGenerateResponse {
-        puzzle_json: puzzle_json.to_string(),
+        puzzle_json,
         svg: puzzle_svg,
         variants,
     })
