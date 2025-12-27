@@ -62,10 +62,10 @@ const VARIANT_DESCRIPTIONS = {
   kropki_black: "Black dots connect digits in a 1:2 ratio.",
   thermo: "Thermo lines increase from bulb to tip.",
   arrow: "Digits along the arrow sum to the circle value.",
-  killer: "Cages sum to the given total, no repeats in a cage.",
-  king: "Kings cannot be a single square apart.",
-  knight: "Knights cannot be a knight's move apart.",
-  queen: "Queens cannot be a diagonal step apart.",
+  killer: "Cages sum to the given total in the top left corner of the cage, no repeats in a cage.",
+  king: "Same digit cannot appear twice within king's move.",
+  knight: "Same digit cannot appear twice within knight's move.",
+  queen: "Same digit cannot appear twice within a queen's move.",
 };
 
 function isTypingInInput() {
